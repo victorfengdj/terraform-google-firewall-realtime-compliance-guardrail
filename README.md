@@ -1,6 +1,6 @@
 # terraform-google-firewall-realtime-compliance-guardrail
 
-![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.2-7B42BC?logo=terraform)
+![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.12-7B42BC?logo=terraform)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python)
 ![Google Cloud Functions](https://img.shields.io/badge/Cloud-Functions%20(2nd%20gen)-4285F4?logo=googlecloud)
 
@@ -8,9 +8,6 @@ Terraform module that deploys a real-time event-driven guardrail to automaticall
 remediate VPC firewall rules that expose blocked ports to the public internet —
 triggered within seconds of the API call being made.
 
-GCP equivalent of
-[terraform-aws-sg-realtime-compliance-guardrail](https://github.com/victorfengdj/terraform-aws-sg-realtime-compliance-guardrail) and
-[terraform-azurerm-nsg-realtime-compliance-guardrail](https://github.com/victorfengdj/terraform-azurerm-nsg-realtime-compliance-guardrail).
 
 ---
 
@@ -83,7 +80,7 @@ Engineer or automation calls:
 | Authentication | Dedicated service account | Zero-credential SDK auth — no secrets stored anywhere |
 | IAM | Custom role (`firewallComplianceRemediator`) | Least-privilege: `get`/`list`/`update`/`delete` on firewall rules only |
 | Source storage | Cloud Storage bucket | Holds the zipped Cloud Function source for deployment |
-| Infrastructure-as-Code | Terraform ≥ 1.2 | All resources declared, version-controlled, and reproducible |
+| Infrastructure-as-Code | Terraform ≥ 1.12 | All resources declared, version-controlled, and reproducible |
 | Remote state | HCP Terraform Cloud | State locking and team collaboration |
 
 ### Multi-cloud component mapping
@@ -151,6 +148,7 @@ module "fw_compliance_guardrail" {
 ```bash
 git clone https://github.com/victorfengdj/terraform-google-firewall-realtime-compliance-guardrail.git
 cd terraform-google-firewall-realtime-compliance-guardrail
+# first: edit terraform.tf — set organization to your own HCP Terraform org
 terraform login        # authenticate with HCP Terraform (one-time)
 terraform init
 terraform plan
@@ -165,12 +163,19 @@ terraform apply
 
 | Requirement | Version / Detail |
 |---|---|
-| [Terraform CLI](https://developer.hashicorp.com/terraform/downloads) | ≥ 1.2 |
+| [Terraform CLI](https://developer.hashicorp.com/terraform/downloads) | ≥ 1.12 |
 | google provider | ~> 6.0 |
-| archive provider | ~> 2.0 |
-| [HCP Terraform account](https://app.terraform.io) | org `wgf`, workspace `terraform-google-firewall-realtime-compliance-guardrail` |
-| GCP credentials | configured in the HCP Terraform workspace as environment variables (`GOOGLE_CREDENTIALS`) |
+| archive provider | ~> 2.7 |
 | Billing | The target GCP project must have billing enabled (required for Cloud Functions, Cloud Build, Eventarc) |
+
+### Credentials & secrets handling
+
+This project stores no secrets in the repository, in Terraform state, or at runtime.
+
+| Layer | Mechanism | Detail |
+|---|---|---|
+| Remote state | HCP Terraform | org — edit `organization` in `terraform.tf` to your own HCP Terraform org; workspace — defaults to `terraform-google-firewall-realtime-compliance-guardrail`. State is stored remotely, encrypted at rest, with access restricted to the workspace |
+| Deployment credentials | HCP Terraform workspace environment variables (`GOOGLE_CREDENTIALS`), marked **Sensitive** | Write-only once saved — cannot be read back through the UI or API; never appear in the repository, plan output, or on a local machine. For production, [dynamic provider credentials](https://developer.hashicorp.com/terraform/cloud-docs/workspaces/dynamic-provider-credentials) (OIDC) are recommended — Terraform authenticates through GCP workload identity federation with short-lived tokens per run, so no service account key is stored at all |
 
 ### Steps
 
@@ -180,6 +185,7 @@ git clone https://github.com/victorfengdj/terraform-google-firewall-realtime-com
 cd terraform-google-firewall-realtime-compliance-guardrail
 
 # 2. Authenticate with HCP Terraform (one-time setup)
+# first: edit terraform.tf — set organization to your own HCP Terraform org
 terraform login
 
 # 3. Initialise — downloads providers and connects to the remote workspace
@@ -217,13 +223,3 @@ terraform apply
 | `service_account_email` | Email of the guardrail's dedicated service account |
 | `pubsub_topic` | Pub/Sub topic that receives firewall rule change events |
 | `log_sink_writer_identity` | Service account used by the Cloud Logging sink to publish events |
-
----
-
-## Related Projects
-
-- **[terraform-aws-sg-realtime-compliance-guardrail](https://github.com/victorfengdj/terraform-aws-sg-realtime-compliance-guardrail)** — AWS equivalent using EventBridge + Lambda + EC2 Security Groups.
-- **[terraform-azurerm-nsg-realtime-compliance-guardrail](https://github.com/victorfengdj/terraform-azurerm-nsg-realtime-compliance-guardrail)** — Azure equivalent using Event Grid + Azure Functions + NSGs.
-- **[terraform-aws-wafacl-golden](https://github.com/victorfengdj/terraform-aws-wafacl-golden)** — Enterprise CloudFront WAF ACL baseline.
-- **[terraform-aws-fm-global-waf-policy](https://github.com/victorfengdj/terraform-aws-fm-global-waf-policy)** — Org-wide WAF enforcement via AWS Firewall Manager.
-- **[terraform-aws-auto-remediate-waf-loss](https://github.com/victorfengdj/terraform-aws-auto-remediate-waf-loss)** — Serverless auto-remediation for CloudFront distributions that lose WAF protection.

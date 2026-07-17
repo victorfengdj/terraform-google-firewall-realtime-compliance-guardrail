@@ -1,8 +1,9 @@
 terraform {
-  required_version = ">= 1.2"
+  required_version = ">= 1.12"
 
   cloud {
-    organization = "wgf"
+    # Replace with your own HCP Terraform organization before `terraform init`.
+    organization = "change-to-your-org"
 
     workspaces {
       name = "terraform-google-firewall-realtime-compliance-guardrail"
@@ -16,7 +17,7 @@ terraform {
     }
     archive = {
       source  = "hashicorp/archive"
-      version = "~> 2.0"
+      version = "~> 2.7"
     }
   }
 }
